@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Console</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202927;
+      --muted: #697570;
+      --line: #dce3de;
+      --paper: #f4f6f1;
+      --surface: #fff;
+      --green: #28745c;
+      --green-dark: #1d5946;
+      --mint: #dceee4;
+      --orange: #cb7746;
+      font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#cbd8ce 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 24px clamp(20px, 6vw, 88px);
+      border-bottom: 1px solid var(--line);
+      background: rgb(255 255 255 / 88%);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 700; }
+    .mark { width: 28px; height: 28px; border-radius: 8px 8px 8px 2px; background: var(--green); position: relative; }
+    .mark::after { content: ""; position: absolute; width: 8px; height: 8px; right: 5px; top: 5px; border-radius: 50%; background: #c8e2cf; }
+    .connection { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+    .connection::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #9aa49e; }
+    .connection.online::before { background: #4d9c72; }
+    main { width: min(1120px, calc(100% - 40px)); margin: 48px auto 80px; animation: arrive 450ms ease-out both; }
+    .heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
+    .eyebrow { margin: 0 0 9px; color: var(--green); font-size: 11px; font-weight: 750; letter-spacing: 1.5px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(30px, 4vw, 42px); line-height: 1.1; letter-spacing: 0; }
+    .subheading { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
+    .count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .toolbar { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(140px, 190px) auto auto; align-items: end; gap: 12px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 650; }
+    input { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid #cbd5ce; border-radius: 5px; background: #fff; color: var(--ink); font: inherit; }
+    input:focus { outline: 2px solid #a9d4b8; outline-offset: 1px; border-color: var(--green); }
+    button { min-height: 42px; padding: 0 16px; border: 1px solid var(--green); border-radius: 5px; background: var(--green); color: white; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    button:hover { background: var(--green-dark); }
+    button.secondary { background: white; color: var(--green-dark); }
+    button.secondary:hover { background: var(--mint); }
+    button:disabled { opacity: .55; cursor: wait; }
+    .table-wrap { margin-top: 20px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .table-head, .task-row { display: grid; grid-template-columns: minmax(150px, 1.1fr) minmax(150px, 1fr) minmax(180px, 1.4fr) minmax(125px, .8fr) 100px; align-items: center; gap: 16px; padding: 14px 18px; }
+    .table-head { color: var(--muted); background: #f8faf7; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; }
+    .task-row { min-height: 72px; border-top: 1px solid #edf0ed; font-size: 13px; animation: arrive 250ms ease-out both; }
+    .task-id { overflow: hidden; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+    .status { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; }
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #adb5af; }
+    .status.RUNNING::before { background: var(--orange); }
+    .status.COMPLETED::before { background: #438c63; }
+    .status.FAILED::before { background: #bd4f48; }
+    .progress-line { display: flex; align-items: center; gap: 10px; }
+    progress { width: 100%; height: 7px; overflow: hidden; border: 0; border-radius: 8px; background: #e8ede9; accent-color: var(--green); }
+    progress::-webkit-progress-bar { border-radius: 8px; background: #e8ede9; }
+    progress::-webkit-progress-value { border-radius: 8px; background: var(--green); transition: width 180ms ease; }
+    .percent { width: 34px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+    .watch { min-height: 32px; padding: 0 10px; font-size: 12px; }
+    .empty { padding: 48px 20px; color: var(--muted); text-align: center; }
+    .notice { min-height: 20px; margin: 12px 2px 0; color: #a34f34; font-size: 13px; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 760px) {
+      main { margin-top: 32px; }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .toolbar label:first-child { grid-column: 1 / -1; }
+      .table-head { display: none; }
+      .task-row { grid-template-columns: 1fr auto; gap: 10px 16px; padding: 16px; }
+      .task-id { grid-column: 1 / -1; }
+      .progress-line { grid-column: 1; }
+      .task-row .created { grid-column: 1; color: var(--muted); }
+      .task-row .watch { grid-column: 2; grid-row: 3 / span 2; }
+      .heading { align-items: start; flex-direction: column; gap: 10px; }
+    }
+    @media (max-width: 420px) {
+      header { padding: 18px 20px; }
+      .connection { font-size: 0; }
+      .toolbar { grid-template-columns: 1fr; }
+      .toolbar label:first-child { grid-column: auto; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="mark" aria-hidden="true"></span>Task Console</div>
+    <div id="connection" class="connection">Live updates idle</div>
+  </header>
+  <main>
+    <div class="heading">
+      <div>
+        <p class="eyebrow">Background processing</p>
+        <h1>Task monitor</h1>
+        <p class="subheading">Create work and follow each run as it progresses.</p>
+      </div>
+      <div id="count" class="count">0 tasks</div>
+    </div>
+    <form id="create-form" class="toolbar">
+      <label>User ID<input id="user-id" name="userId" maxlength="255" autocomplete="username" required></label>
+      <label>Duration · seconds<input id="duration" name="duration" type="number" min="1" max="86400" value="10" required></label>
+      <button id="create-button" type="submit">＋ Create task</button>
+      <button id="refresh-button" class="secondary" type="button" title="Refresh task list">↻ Refresh</button>
+    </form>
+    <div id="notice" class="notice" role="status" aria-live="polite"></div>
+    <section class="table-wrap" aria-label="Tasks">
+      <div class="table-head"><span>Task ID</span><span>Status</span><span>Progress</span><span>Created</span><span></span></div>
+      <div id="task-list"><div class="empty">No tasks yet</div></div>
+    </section>
+  </main>
+  <script>
+    const userInput = document.querySelector("#user-id");
+    const taskList = document.querySelector("#task-list");
+    const notice = document.querySelector("#notice");
+    const sockets = new Map();
+    userInput.value = localStorage.getItem("task-console-user") || "demo-user";
+
+    function headers() {
+      localStorage.setItem("task-console-user", userInput.value.trim());
+      return { "X-User-Id": userInput.value.trim(), "Content-Type": "application/json" };
+    }
+
+    function render(tasks) {
+      document.querySelector("#count").textContent = `${tasks.length} task${tasks.length === 1 ? "" : "s"}`;
+      if (!tasks.length) {
+        taskList.innerHTML = '<div class="empty">No tasks yet</div>';
+        return;
+      }
+      taskList.innerHTML = tasks.map(task => row(task)).join("");
+      for (const task of tasks) watch(task.id);
+    }
+
+    function row(task) {
+      const created = new Date(task.createdAt).toLocaleString();
+      return `<article class="task-row" data-id="${task.id}">
+        <span class="task-id" title="${task.id}">${task.id}</span>
+        <span class="status ${task.status}">${task.status}</span>
+        <span class="progress-line"><progress max="100" value="${task.progress}"></progress><span class="percent">${task.progress}%</span></span>
+        <span class="created">${created}</span>
+        <button class="secondary watch" type="button" data-watch="${task.id}">Live</button>
+      </article>`;
+    }
+
+    function updateTask(id, update) {
+      const item = taskList.querySelector(`[data-id="${id}"]`);
+      if (!item) return;
+      const status = item.querySelector(".status");
+      status.className = `status ${update.status}`;
+      status.textContent = update.status;
+      item.querySelector("progress").value = update.progress;
+      item.querySelector(".percent").textContent = `${update.progress}%`;
+      if (["COMPLETED", "FAILED"].includes(update.status)) {
+        sockets.get(id)?.close();
+        sockets.delete(id);
+      }
+    }
+
+    function watch(id) {
+      if (sockets.has(id) || !userInput.value.trim()) return;
+      const scheme = location.protocol === "https:" ? "wss:" : "ws:";
+      const query = new URLSearchParams({ userId: userInput.value.trim() });
+      const socket = new WebSocket(`${scheme}//${location.host}/tasks/${id}/progress?${query}`);
+      sockets.set(id, socket);
+      socket.onopen = () => {
+        document.querySelector("#connection").textContent = "Live updates connected";
+        document.querySelector("#connection").classList.add("online");
+      };
+      socket.onmessage = event => updateTask(id, JSON.parse(event.data));
+      socket.onclose = () => {
+        sockets.delete(id);
+        if (sockets.size === 0) {
+          document.querySelector("#connection").textContent = "Live updates idle";
+          document.querySelector("#connection").classList.remove("online");
+        }
+      };
+      socket.onerror = () => { notice.textContent = `Could not connect to task ${id}.`; };
+    }
+
+    async function loadTasks() {
+      if (!userInput.value.trim()) return;
+      try {
+        const response = await fetch("/tasks", { headers: headers() });
+        if (!response.ok) throw new Error(`Request failed (${response.status})`);
+        render(await response.json());
+        notice.textContent = "";
+      } catch (error) {
+        notice.textContent = error.message;
+      }
+    }
+
+    document.querySelector("#create-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = document.querySelector("#create-button");
+      button.disabled = true;
+      try {
+        const response = await fetch("/tasks", {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ duration: Number(document.querySelector("#duration").value) })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || `Request failed (${response.status})`);
+        await loadTasks();
+        watch(result.taskId);
+        notice.textContent = `Task ${result.taskId} created.`;
+      } catch (error) {
+        notice.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+    document.querySelector("#refresh-button").addEventListener("click", loadTasks);
+    taskList.addEventListener("click", event => {
+      const button = event.target.closest("[data-watch]");
+      if (button) watch(button.dataset.watch);
+    });
+    userInput.addEventListener("change", () => {
+      for (const socket of sockets.values()) socket.close();
+      sockets.clear();
+      loadTasks();
+    });
+    loadTasks();
+  </script>
+</body>
+</html>
