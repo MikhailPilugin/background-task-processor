@@ -1,26 +1,25 @@
 package com.example
 
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.plugins.websocket.WebSockets
-import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.client.request.url
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import kotlinx.serialization.json.jsonPrimitive
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class TaskApiTest {
     @Test
@@ -54,7 +53,10 @@ class TaskApiTest {
         val socketClient = createClient {
             install(WebSockets)
         }
-        socketClient.webSocket("/tasks/$taskId/progress?userId=alice") {
+        socketClient.webSocket({
+            url("/tasks/$taskId/progress")
+            header("X-User-Id", "alice")
+        }) {
             val frame = incoming.receive() as Frame.Text
             val event = Json.parseToJsonElement(frame.readText()).jsonObject
             assertEquals(0, event.getValue("progress").jsonPrimitive.content.toInt())
