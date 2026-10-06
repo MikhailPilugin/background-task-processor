@@ -20,6 +20,12 @@ class TaskExecutor(
     fun start(taskId: UUID, userId: String, durationSeconds: Int) {
         scope.launch {
             try {
+                val current = repository.findById(taskId, userId)
+                if (current?.status == TaskStatus.RUNNING || current?.status == TaskStatus.COMPLETED) {
+                    logger.warn("Task {} is already {} — not restarting", taskId, current.status)
+                    return@launch
+                }
+
                 val updated = repository.updateProgress(taskId, 0, TaskStatus.RUNNING)
                 if (!updated) {
                     logger.warn("Task {} disappeared: progress update affected no rows", taskId)
