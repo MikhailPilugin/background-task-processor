@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 class TaskEventHub {
     private val events = ConcurrentHashMap<UUID, MutableSharedFlow<TaskProgress>>()
 
-    fun stream(taskId: UUID): SharedFlow<TaskProgress> = flowFor(taskId)
+    fun stream(taskId: UUID): SharedFlow<TaskProgress>? = events[taskId]
 
     fun publish(taskId: UUID, progress: TaskProgress) {
         val flow = flowFor(taskId)
