@@ -13,7 +13,11 @@ class TaskEventHub {
     fun stream(taskId: UUID): SharedFlow<TaskProgress> = flowFor(taskId)
 
     fun publish(taskId: UUID, progress: TaskProgress) {
-        flowFor(taskId).tryEmit(progress)
+    val flow = flowFor(taskId)
+    flow.tryEmit(progress)
+    if (progress.status == TaskStatus.COMPLETED || progress.status == TaskStatus.FAILED) {
+        events.remove(taskId)
+        }
     }
 
     private fun flowFor(taskId: UUID): MutableSharedFlow<TaskProgress> = events.computeIfAbsent(taskId) {
