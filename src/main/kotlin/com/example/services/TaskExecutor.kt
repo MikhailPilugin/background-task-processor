@@ -20,7 +20,11 @@ class TaskExecutor(
     fun start(taskId: UUID, userId: String, durationSeconds: Int) {
         scope.launch {
             try {
-                repository.updateProgress(taskId, 0, TaskStatus.RUNNING)
+                val updated = repository.updateProgress(taskId, 0, TaskStatus.RUNNING)
+                if (!updated) {
+                    logger.warn("Task {} disappeared: progress update affected no rows", taskId)
+                    return@launch
+                }
                 eventHub.publish(taskId, TaskProgress(0, TaskStatus.RUNNING))
 
                 val steps = 20
@@ -28,7 +32,11 @@ class TaskExecutor(
                     delay(durationSeconds * 1_000L / steps)
                     val progress = (step + 1) * 100 / steps
                     val status = if (progress == 100) TaskStatus.COMPLETED else TaskStatus.RUNNING
-                    repository.updateProgress(taskId, progress, status)
+                    val updated = repository.updateProgress(taskId, progress, status)
+                    if (!updated) {
+                        logger.warn("Task {} disappeared: progress update affected no rows", taskId)
+                        return@launch
+                    }
                     eventHub.publish(taskId, TaskProgress(progress, status))
                 }
                 eventHub.cleanup(taskId)

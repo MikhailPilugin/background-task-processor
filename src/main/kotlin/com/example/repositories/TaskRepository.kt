@@ -56,14 +56,13 @@ class TaskRepository(private val database: Database) {
         }
     }
 
-    suspend fun updateProgress(id: UUID, progress: Int, status: TaskStatus) {
-        withContext(Dispatchers.IO) {
-            transaction(database) {
-                TasksTable.update({ TasksTable.id eq id }) {
-                    it[TasksTable.progress] = progress
-                    it[TasksTable.status] = status
-                }
-            }
+    suspend fun updateProgress(id: UUID, progress: Int, status: TaskStatus): Boolean =
+    withContext(Dispatchers.IO) {
+        transaction(database) {
+            TasksTable.update({ TasksTable.id eq id }) {
+                it[TasksTable.progress] = progress
+                it[TasksTable.status] = status
+            } > 0
         }
     }
 
