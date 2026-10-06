@@ -10,6 +10,8 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 class TaskExecutor(
+    private val logger = LoggerFactory.getLogger(TaskExecutor::class.java)
+
     private val repository: TaskRepository,
     private val eventHub: TaskEventHub,
     private val scope: CoroutineScope,
@@ -31,6 +33,7 @@ class TaskExecutor(
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
+                logger.error("Task {} failed", taskId, exception)
                 val current = repository.findById(taskId, userId)
                 if (current != null) {
                     repository.updateProgress(taskId, current.progress, TaskStatus.FAILED)
