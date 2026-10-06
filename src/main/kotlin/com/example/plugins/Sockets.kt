@@ -2,13 +2,13 @@ package com.example.plugins
 
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
-import io.ktor.server.websocket.WebSockets
-import kotlin.time.Duration.Companion.seconds
+import io.ktor.server.websocket.*
+import java.time.Duration
 
 fun Application.configureSockets() {
     install(WebSockets) {
-        pingPeriod = 15.seconds
-        timeout = 30.seconds
+        pingPeriod = Duration.ofSeconds(15)
+        timeout = Duration.ofSeconds(30)
         maxFrameSize = 64 * 1024L
     }
 }

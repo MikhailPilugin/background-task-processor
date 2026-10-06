@@ -11,6 +11,11 @@ import java.util.concurrent.ConcurrentHashMap
 class TaskEventHub {
     private val events = ConcurrentHashMap<UUID, MutableSharedFlow<TaskProgress>>()
 
+    /**
+     * Возвращает null, если flow задачи ещё не создан или уже удалён
+     * после завершения задачи. Вызывающая сторона (WS-маршрут) должна
+     * в этом случае взять актуальный статус из БД.
+     */
     fun stream(taskId: UUID): SharedFlow<TaskProgress>? = events[taskId]
 
     fun publish(taskId: UUID, progress: TaskProgress) {
@@ -19,6 +24,11 @@ class TaskEventHub {
         if (progress.status == TaskStatus.COMPLETED || progress.status == TaskStatus.FAILED) {
             events.remove(taskId)
         }
+    }
+
+    /** Удаляет flow задачи после финального статуса — иначе map растёт бесконечно. */
+    fun cleanup(taskId: UUID) {
+        events.remove(taskId)
     }
 
     private fun flowFor(taskId: UUID): MutableSharedFlow<TaskProgress> =

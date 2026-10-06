@@ -1,11 +1,10 @@
 package com.example.plugins
 
-import com.example.models.TaskProgress
-import com.example.models.TaskStatus
-import kotlinx.coroutines.cancel
 import com.example.models.CreateTaskRequest
 import com.example.models.CreateTaskResponse
+import com.example.models.TaskProgress
 import com.example.models.TaskResponse
+import com.example.models.TaskStatus
 import com.example.models.toResponse
 import com.example.services.TaskEventHub
 import com.example.services.TaskService
@@ -22,6 +21,7 @@ import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
 import io.ktor.websocket.send
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -81,9 +81,9 @@ fun Application.configureRouting(taskService: TaskService, eventHub: TaskEventHu
             }
         }
 
-            webSocket("/tasks/{taskId}/progress") {
+        webSocket("/tasks/{taskId}/progress") {
             val taskId = call.parameters["taskId"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            val userId = call.request.queryParameters["userId"]?.trim()
+            val userId = call.request.headers["X-User-Id"]?.trim()
             if (taskId == null || userId.isNullOrEmpty()) {
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "taskId or userId missing"))
                 return@webSocket
@@ -105,7 +105,6 @@ fun Application.configureRouting(taskService: TaskService, eventHub: TaskEventHu
             val flow = eventHub.stream(taskId)
             if (flow == null) {
                 // Редкая гонка: задача завершилась между проверкой статуса и подпиской.
-                // Финальный статус берём из БД.
                 val latest = taskService.getTask(taskId, userId)
                 if (latest != null) {
                     send(Frame.Text(Json.encodeToString(TaskProgress(latest.progress, latest.status))))
@@ -122,6 +121,8 @@ fun Application.configureRouting(taskService: TaskService, eventHub: TaskEventHu
                 }
             }
         }
+    }
+}
 
 @kotlinx.serialization.Serializable
 data class ErrorResponse(val error: String)
