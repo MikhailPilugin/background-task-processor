@@ -81,7 +81,7 @@ fun Application.configureRouting(taskService: TaskService, eventHub: TaskEventHu
             }
         }
 
-                webSocket("/tasks/{taskId}/progress") {
+            webSocket("/tasks/{taskId}/progress") {
             val taskId = call.parameters["taskId"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             val userId = call.request.queryParameters["userId"]?.trim()
             if (taskId == null || userId.isNullOrEmpty()) {
