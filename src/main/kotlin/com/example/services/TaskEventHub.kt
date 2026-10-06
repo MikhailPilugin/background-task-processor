@@ -1,6 +1,7 @@
 package com.example.services
 
 import com.example.models.TaskProgress
+import com.example.models.TaskStatus
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -13,14 +14,15 @@ class TaskEventHub {
     fun stream(taskId: UUID): SharedFlow<TaskProgress> = flowFor(taskId)
 
     fun publish(taskId: UUID, progress: TaskProgress) {
-    val flow = flowFor(taskId)
-    flow.tryEmit(progress)
-    if (progress.status == TaskStatus.COMPLETED || progress.status == TaskStatus.FAILED) {
-        events.remove(taskId)
+        val flow = flowFor(taskId)
+        flow.tryEmit(progress)
+        if (progress.status == TaskStatus.COMPLETED || progress.status == TaskStatus.FAILED) {
+            events.remove(taskId)
         }
     }
 
-    private fun flowFor(taskId: UUID): MutableSharedFlow<TaskProgress> = events.computeIfAbsent(taskId) {
-        MutableSharedFlow(replay = 1, extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    }
+    private fun flowFor(taskId: UUID): MutableSharedFlow<TaskProgress> =
+        events.computeIfAbsent(taskId) {
+            MutableSharedFlow(replay = 1, extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        }
 }
