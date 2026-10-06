@@ -8,12 +8,14 @@ import com.example.services.TaskEventHub
 import com.example.services.TaskExecutor
 import com.example.services.TaskService
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopping
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import org.slf4j.LoggerFactory
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -24,13 +26,19 @@ fun main() {
 fun Application.module() {
     DatabaseFactory.init()
 
-    val taskScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val repository = TaskRepository(DatabaseFactory.database)
+    val stale = repository.failStaleRunningTasks()
+    if (stale > 0) {
+        LoggerFactory.getLogger(Application::class.java)
+            .warn("Marked {} orphaned RUNNING tasks as FAILED after restart", stale)
+    }
+
+    val taskScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val eventHub = TaskEventHub()
     val executor = TaskExecutor(repository, eventHub, taskScope)
     val taskService = TaskService(repository, executor)
 
-    environment.monitor.subscribe(io.ktor.server.application.ApplicationStopping) {
+    environment.monitor.subscribe(ApplicationStopping) {
         taskScope.cancel()
         DatabaseFactory.close()
     }
