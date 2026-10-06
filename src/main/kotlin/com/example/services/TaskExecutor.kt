@@ -1,21 +1,22 @@
 package com.example.services
 
-import com.example.models.TaskStatus
 import com.example.models.TaskProgress
+import com.example.models.TaskStatus
 import com.example.repositories.TaskRepository
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 import java.util.UUID
 
 class TaskExecutor(
-    private val logger = LoggerFactory.getLogger(TaskExecutor::class.java)
-
     private val repository: TaskRepository,
     private val eventHub: TaskEventHub,
     private val scope: CoroutineScope,
 ) {
+    private val logger = LoggerFactory.getLogger(TaskExecutor::class.java)
+
     fun start(taskId: UUID, userId: String, durationSeconds: Int) {
         scope.launch {
             try {
@@ -30,6 +31,7 @@ class TaskExecutor(
                     repository.updateProgress(taskId, progress, status)
                     eventHub.publish(taskId, TaskProgress(progress, status))
                 }
+                eventHub.cleanup(taskId)
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
@@ -38,6 +40,7 @@ class TaskExecutor(
                 if (current != null) {
                     repository.updateProgress(taskId, current.progress, TaskStatus.FAILED)
                     eventHub.publish(taskId, TaskProgress(current.progress, TaskStatus.FAILED))
+                    eventHub.cleanup(taskId)
                 }
             }
         }
